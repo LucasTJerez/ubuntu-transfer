@@ -4,10 +4,12 @@ max:
 	# At the start of max, the two arguments can be found in $a0 and $a1.
 	# Replace the line below with your function implementation.
 	li $v0, 0
+	ble $a0, $a1, max1
+	move $v0, $a0
+	jr $ra
 
-    
-	# Your return value should be in $v0 prior to returning. 
-	# To return from max, use 'jr $ra'
+max1:
+	move $v0, $a1
 	jr $ra
 
 
@@ -18,10 +20,40 @@ fibonacci:
 	# At the start of fibonacci, the argument can be found in $a0.
 	# Replace the line below with your code.
 	li $v0, 0
-    
-	# Your return value should be in $v0 prior to returning. 
-	# To return, use 'jr $ra'
-	jr $ra
+
+	
+	li $t0, 0 # initialize the sum to 0
+	li $t1, 0 # initialize the counter to 0
+	li $t2, 0 # initialize previous val to 0
+
+	j fib
+	
+
+	
+fib:
+	blt $t1, $a0, fibBranch # counter < a0? fibBranch
+
+ 	move $v0, $t0
+ 	jr $ra
+
+ fibBranch:
+ 	beqz $t1, fibBranchZero # counter = 0? fibBranch
+
+ 	move $t3, $t0 # create temporary sum
+	
+ 	add $t0, $t0, $t2 # sum = sum + previous val
+
+ 	move $t2, $t3 # set previous value equal to previous sum
+
+ 	addi $t1, 1
+
+ 	j fib
+
+
+fibBranchZero:
+ 	addi $t0, 1 # if the current sum is 0, add 1 to the sum
+ 	addi $t1, 1 # add one to counter
+ 	j fib
 
 ######################################################## DO NOT REMOVE THIS SEPARATOR
 
@@ -30,10 +62,47 @@ minimumBills:
 	# At the start of minimumBills, the argument can be found in $a0.
 	# Replace the line below with your code.
 	li $v0, 0
-    
-	# Your return value should be in $v0 prior to returning. 
-	# To return, use 'jr $ra'
+
+	move $t0, $a0 # currentMoney = totalMoney
+	li $t1, 0 # count = 0
+	
+	j countBills
+
+countBills:
+
+	li $t2, 10
+	bge $t0, $t2, subtract10
+
+	li $t2, 5
+	bge $t0, $t2, subtract5
+
+	li $t2, 1
+
+	bge $t0, $t2, subtract1
+
+
+	move $v0, $t1
 	jr $ra
+
+
+subtract10: # subtract 10 from currentMoney and add 1 to count
+	sub $t0, $t0, $t2
+	addi $t1, 1 
+	j countBills
+
+subtract5: # subtract 5 from currentMoney and add 1 to count
+	sub $t0, $t0, $t2
+	addi $t1, 1 
+	j countBills
+
+subtract1: # subtract 1 from currentMoney and add 1 to count
+	sub $t0, $t0, $t2
+	addi $t1, 1 
+	j countBills
+
+
+    
+	
 
 ######################################################## DO NOT REMOVE THIS SEPARATOR
 
@@ -43,10 +112,86 @@ fizzbuzz:
 	addi $sp, $sp, -4
 	sw   $ra, 0($sp)
 
-	# Put your code here.
-	# To print an integer, put the integer in $a0 and execute 'jal print_int'
-	# To print a string, make the appropriate function call:
-	#     'jal print_fizz', 'jal print_buzz', 'jal print_fizzbuzz'
+	li $t0, 1 # count = 1
+	move $t9, $a0 # create a copy of input
+
+	j printNumbers
+
+printNumbers:
+
+	bgt $t0, $t9, return_from_fizzbuzz # if count > input, return
+
+	li $t3, 0
+	li $t5, 0
+
+
+	move $t1, $t0 # create copy of count for checking divisibility
+	j divisibleByThree
+returnDivisibleByThree:
+	move $t1, $t0 # create copy of count for checking divisibility
+	j divisibleByFive
+returnDivisibleByFive:
+	bgtz $t3, printThree
+	bgtz $t5, printFive
+	move $a0, $t0
+	jal print_int
+	j afterPrint
+afterPrint:
+	addi $t0, 1
+	j printNumbers
+
+
+printThree:
+	bgtz $t5, printThreeAndFive
+	jal print_fizz
+	j afterPrint
+
+printFive:
+	jal print_buzz
+	j afterPrint
+
+printThreeAndFive:
+	jal print_fizzbuzz
+	j afterPrint
+
+
+
+
+divisibleByThree:
+	bgtz $t1, subtractThree
+	beqz $t1, threeDivides
+	j returnDivisibleByThree
+subtractThree:
+	addi $t1, -3
+	j divisibleByThree
+threeDivides:
+	li $t3, 1
+	j returnDivisibleByThree
+
+divisibleByFive:
+	bgtz $t1, subtractFive
+	beqz $t1, fiveDivides
+	j returnDivisibleByFive
+subtractFive:
+	addi $t1, -5
+	j divisibleByFive
+fiveDivides:
+	li $t5, 1
+	j returnDivisibleByFive
+
+
+
+
+
+
+
+divisibleByFive:
+	jal print_buzz
+	j returnDivisibleByFive
+	
+
+
+
 
 	
 return_from_fizzbuzz:	
@@ -69,7 +214,7 @@ main:
 	li $a0, 10
 	li $a1, 11
 	jal max
-	move $a0, $v0
+	move $a0, $v0 
 	jal print_int
 
 	# max(11,10) = 11
@@ -100,10 +245,10 @@ main:
 	jal print_newline
 	
 	# fibonacci(0) = 0
-	li $a0, 0
-	jal fibonacci
-	move $a0, $v0
-	jal print_int
+	 li $a0, 0
+	 jal fibonacci
+	 move $a0, $v0
+	 jal print_int
 
 	# fibonacci(4) = 3
 	li $a0, 4
