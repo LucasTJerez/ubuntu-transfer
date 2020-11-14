@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+from socket import *
+import sys
+
+if __name__=='__main__':
+    args = sys.argv
+    listenPort= int(args[1])
+    fakeIP = args[2]
+    serverIP = args[3]
+  
+    #create listen socket, bind it to listenPort, and listen for incoming connections
+    serverSocket = socket(AF_INET,SOCK_STREAM)
+    serverSocket.bind(('',listenPort))
+    serverSocket.listen(1)
+    outboundSocket = socket(AF_INET, SOCK_STREAM)
+    outboundSocket.bind((fakeIP,0))
+    #try to connect to server
+    try:
+       outboundSocket.connect((serverIP, 8080))
+    except error:
+        errorMsg = "{err}, can't connect to IP {IP} at port number {port}".format(err = str(error), IP = serverIP, port = 8080)
+        print(errorMsg)
+        print("Shutting down proxy")
+        sys.exit()
+
+
+    while(True):
+        #accept connection from client
+        clientSocket, addr = serverSocket.accept()
+        print("client with {address} accepted".format(address = addr))
+
+
+        br = False
+
+        #1) clientMSG->proxy->server
+        #2) serverResponse->proxy->client
+        #3) repeat steps 1 and 2 until either client or server closes socket on their end
+        try:
+            while True:
+                 
+                #first, get the client message
+                clientMessage =[] 
+                while(1):
+                    buff = clientSocket.recv(100)
+                    if(len(buff) == 0):
+                        # raise Exception() #client socket closed
+                        print("client closed their socket, maintaining server socket and waiting for new client")
+                        br = True
+                        break
+
+                    clientMessage.append(buff)
+                    if buff[-1] == 10:
+                        break;  
+                if br:
+                    break  
+                #second, send the client message to server
+                for seg in clientMessage:
+                    outboundSocket.send(seg)
+                 
+                #third, get the server response message
+                serverMessage = []
+                while(1):
+                    buff = outboundSocket.recv(100)
+                    if(len(buff) == 0):
+                        raise error() #server socket closed
+                    serverMessage.append(buff)
+                    if buff[-1] == 10:
+                        break;
+            
+                #fourth, send the server response message to client
+                for seg in serverMessage:
+                    clientSocket.send(seg)
+        except error:
+            print("Server closed their socket. Shutting down proxy")
+            clientSocket.close()
+            outboundSocket.close()
+            sys.exit()
+
+
+    
+            
+    
+    
