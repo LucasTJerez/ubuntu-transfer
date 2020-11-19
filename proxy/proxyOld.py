@@ -49,23 +49,21 @@ def readHTTP(socket):
 bitrateMap = None  # Maps labels to actual bitrates
 # numChunks = 103
 # So we don't do extra work
-minBitrate = None
 
 # Throughput
+currentTP = 0
+currentBitrate = -1
 
 # lastTime = None
 
 
-def modifyChunk(clientMessage, currentBitrate):
-    global minBitrate
+def modifyChunk(clientMessage):
+    global currentBitrate
 
     chunkRE = re.compile(b'[0-9]+Seg[0-9]+-Frag[0-9]+')
     chunkRequest = chunkRE.search(clientMessage)
     if(chunkRequest == None):
         return clientMessage
-
-    if(currentBitrate == None):
-        currentBitrate = minBitrate
 
     startIdx = chunkRequest.start()
     numRE = re.compile(b'[0-9]+')
@@ -74,6 +72,19 @@ def modifyChunk(clientMessage, currentBitrate):
         num.group(0), str(currentBitrate).encode('utf-8'))
 
     return newClientMessage
+
+
+def checkForSWF(clientMessage, serverMessage):
+    global numChunks
+    swfRE = re.compile(b'GET\s/StrobeMediaPlayback.swf')
+    if(swfRE.search(clientMessage) == None):
+        return
+    crlfRE = re.compile(b'\\r\\n\\r\\n')
+    crlf = crlfRE.search(serverMessage)
+
+    # TODO: Figure out number of chunks from swf object. For now, we hardcode it
+
+    numChunks = 103
 
 
 def checkForManifest(clientMessage, serverMessage, contLen, fakeIP, serverIP):
@@ -92,7 +103,6 @@ def checkForManifest(clientMessage, serverMessage, contLen, fakeIP, serverIP):
         bitrates.append(bitrate)
 
     bitrates.sort()
-    global minBitrate
     minBitrate = bitrates[0]
     ### HARD CODING ACTUAL BITRATES, MAPPING TO BITRATES IN MANIFEST ###
     # Duration = 596.50133333333338 seconds, 5.84805228758 s per chunk
@@ -109,6 +119,9 @@ def checkForManifest(clientMessage, serverMessage, contLen, fakeIP, serverIP):
     for idx, rate in enumerate(bitrates):
         bitrateMap[rate] = actualBitrates[idx]
 
+    global currentBitrate
+    currentBitrate = minBitrate
+
     newRequest = clientMessage.replace(
         b'big_buck_bunny.f4m', b'big_buck_bunny_nolist.f4m')
 
@@ -120,7 +133,8 @@ def checkForManifest(clientMessage, serverMessage, contLen, fakeIP, serverIP):
     return newServerResponse
 
 
-def measureThroughput(clientMessage, ts, tf, contLen, alpha, currentTP):
+def measureThroughput(clientMessage, ts, tf, contLen, alpha):
+    global currentTP
     global bitrateMap
     chunkRE = re.compile(b'/vod/[0-9]+Seg[0-9]+-Frag[0-9]+')
     chunkRequest = chunkRE.search(clientMessage)
@@ -129,23 +143,17 @@ def measureThroughput(clientMessage, ts, tf, contLen, alpha, currentTP):
 
     kbit_length = float(contLen)*8.0/1000.0
     newTP = kbit_length/(tf-ts)
-
-    if(currentTP == None):
-        currentTP = newTP
-    else:
-        currentTP = alpha*newTP + (1-alpha)*currentTP
-
+    currentTP = alpha*newTP + (1-alpha)*currentTP
     return newTP, currentTP
 
 
-def modifyBitrate(currentTP, currentBitrate):
+def modifyBitrate():
     global bitrateMap
+    global currentTP
+    global currentBitrate
 
     # haven't read manifest yet
-    # if(bitrateMap == None):
-    #     return [None, None]
-
-    if(currentTP == None):
+    if(bitrateMap == None):
         return [None, None]
 
     for key, val in bitrateMap.items():
@@ -160,8 +168,8 @@ def modifyBitrate(currentTP, currentBitrate):
 
 
 def newClientSocket(clientSocket, addr, log, alpha, fakeIP, serverIP, logTimeStart):
-    currentBitrate = None
-    currentTP = None
+    global currentBitrate
+    global lastTime
     # ts = time.time()
 
     # if(lastTime == None):
@@ -187,7 +195,7 @@ def newClientSocket(clientSocket, addr, log, alpha, fakeIP, serverIP, logTimeSta
         # print(clientMessage)
 
         #### MODIFY CLIENT MESSAGE HERE ###
-        clientMessage = modifyChunk(clientMessage, currentBitrate)
+        clientMessage = modifyChunk(clientMessage)
 
         try:
             outboundSocket.sendall(clientMessage)
@@ -216,9 +224,8 @@ def newClientSocket(clientSocket, addr, log, alpha, fakeIP, serverIP, logTimeSta
 
         ### MEASURE THROUGHPUT AND CHANGE BITRATE HERE (only if we've seen the manifest) ###
         newTP, currentTP = measureThroughput(
-            clientMessage, ts, tf, contLen, alpha, currentTP)
-        currentBitrate, actualBitrate = modifyBitrate(
-            currentTP, currentBitrate)
+            clientMessage, ts, tf, contLen, alpha)
+        currentBitrate, actualBitrate = modifyBitrate()
 
         writeLog(log, clientMessage, serverTime, newTP, currentTP,
                  actualBitrate, serverIP, currentBitrate)
