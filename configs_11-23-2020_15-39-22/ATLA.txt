@@ -1,0 +1,12 @@
+Building configuration...
+
+Current configuration:
+!
+frr version 7.2.1
+frr defaults traditional
+hostname ATLA_router
+no ipv6 forwarding
+!
+line vty
+!
+end
