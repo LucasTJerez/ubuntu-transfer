@@ -1,0 +1,83 @@
+Building configuration...
+
+Current configuration:
+!
+frr version 7.2.1
+frr defaults traditional
+hostname PARI_router
+no ipv6 forwarding
+!
+interface ext_1000_LOND
+ ip address 180.0.85.2/24
+!
+interface ext_86_PARI
+ ip address 86.255.85.2/24
+!
+interface host
+ ip address 85.103.0.2/24
+!
+interface lo
+ ip address 85.153.0.1/24
+!
+interface matrix_85
+ ip address 85.0.198.1/24
+!
+interface port_GENE
+ ip address 85.0.3.1/24
+!
+interface port_LOND
+ ip address 85.0.4.1/24
+!
+interface port_MIAM
+ ip address 85.0.6.1/24
+!
+interface port_NEWY
+ ip address 85.0.5.1/24
+!
+interface port_ZURI
+ ip address 85.0.1.2/24
+!
+router bgp 85
+ neighbor 85.151.0.1 remote-as 85
+ neighbor 85.151.0.1 update-source 85.153.0.1
+ neighbor 85.152.0.1 remote-as 85
+ neighbor 85.152.0.1 update-source 85.153.0.1
+ neighbor 85.154.0.1 remote-as 85
+ neighbor 85.154.0.1 update-source 85.153.0.1
+ neighbor 85.155.0.1 remote-as 85
+ neighbor 85.155.0.1 update-source 85.153.0.1
+ neighbor 85.156.0.1 remote-as 85
+ neighbor 85.156.0.1 update-source 85.153.0.1
+ neighbor 85.157.0.1 remote-as 85
+ neighbor 85.157.0.1 update-source 85.153.0.1
+ neighbor 85.158.0.1 remote-as 85
+ neighbor 85.158.0.1 update-source 85.153.0.1
+ neighbor 86.255.85.1 remote-as 86
+ neighbor 180.0.85.1 remote-as 1000
+ !
+ address-family ipv4 unicast
+  network 85.0.0.0/8
+  neighbor 85.151.0.1 next-hop-self
+  neighbor 85.152.0.1 next-hop-self
+  neighbor 85.154.0.1 next-hop-self
+  neighbor 85.155.0.1 next-hop-self
+  neighbor 85.156.0.1 next-hop-self
+  neighbor 85.157.0.1 next-hop-self
+  neighbor 85.158.0.1 next-hop-self
+ exit-address-family
+!
+router ospf
+ network 85.0.1.0/24 area 0
+ network 85.0.3.0/24 area 0
+ network 85.0.4.0/24 area 0
+ network 85.0.5.0/24 area 0
+ network 85.0.6.0/24 area 0
+ network 85.0.198.0/24 area 0
+ network 85.103.0.0/24 area 0
+ network 85.153.0.0/24 area 0
+ network 86.255.85.0/24 area 0
+ network 180.0.85.0/24 area 0
+!
+line vty
+!
+end
