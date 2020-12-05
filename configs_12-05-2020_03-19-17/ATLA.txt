@@ -56,7 +56,6 @@ router ospf
  network 85.0.13.0/24 area 0
  network 85.107.0.0/24 area 0
  network 85.157.0.0/24 area 0
- network 85.255.88.0/24 area 0
 !
 line vty
 !
